@@ -1,0 +1,13 @@
+provider.tf
+.terraform.lock.hcl
+.terraform/plugins/
+.terraform/modules/
+*.tfstate
+*.tfstate.backup
+crash.log
+plan.txt
+*.info
+.terraform.tfstate.lock.info
+*.terraform
+.hcl
+*.tfvars

@@ -1,0 +1,75 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: flex-karpenter-system
+  annotations:
+    kubernetes.io/description: "These nodes are intended for system pods"
+spec:
+  template:
+    metadata:
+      labels:
+        intent: flex-karpenter-managed
+        usage: system-pods
+    spec:
+      expireAfter: 8760h
+      requirements:
+      - key: karpenter.sh/capacity-type
+        operator: In
+        values: [ "spot", "on-demand" ]
+      - key: kubernetes.io/arch
+        operator: In
+        values: [ "amd64" ]
+      - key: node.kubernetes.io/instance-type
+        operator: In
+        values: [ "m7i-flex.large", "c7i-flex.large" ]
+      - key: topology.kubernetes.io/zone
+        operator: In
+        values:
+        - us-east-1a
+        - us-east-1b
+      - key: karpenter.k8s.aws/instance-generation
+        operator: Gt
+        values: [ "2" ]
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: prod-karpenter-system-class
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 5m
+  limits:
+    cpu: "8"
+    memory: 32Gi
+  weight: 20
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: prod-karpenter-system-class
+spec:
+  amiFamily: AL2023
+  amiSelectorTerms:
+  - id: "ami-0f8f4b97abe105a0f"
+  associatePublicIPAddress: false
+  detailedMonitoring: false
+  instanceProfile: "KarpenterNodeInstanceProfile-precta_cluser_eks"
+  subnetSelectorTerms:
+  - id: "subnet-044d8441ada59b31b"
+  - id: "subnet-049c199007d52c4ac" # Reusing the same subnet for both pools to simplify the setup
+  securityGroupSelectorTerms:
+  - id: "sg-0a6037f68bca0a803"
+
+  blockDeviceMappings:
+  - deviceName: /dev/xvda
+    ebs:
+      volumeSize: 250Gi
+      volumeType: gp3
+      encrypted: true
+  kubelet:
+    imageGCHighThresholdPercent: 70
+    imageGCLowThresholdPercent: 60
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpPutResponseHopLimit: 2
+    httpTokens: required
